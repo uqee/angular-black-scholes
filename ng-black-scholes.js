@@ -20,70 +20,77 @@
     //  GNU General Public License for more details.
     //  http://www.fsf.org/copyleft/gpl.html
 
-    .factory('black-scholes', [function () {
+    .factory('bsFactory', [function () {
 
       // normal distribution function
-      function NDF (z) {
-        return (1.0 / Math.sqrt(2 * Math.PI)) * Math.exp(-0.5 * z);
+      function _NDF (x) {
+        return Math.exp(- (x * x) / 2) / Math.sqrt(2 * Math.PI);
       }
 
-      // cumulative normal distribution function (interpolated)
+      // cumulative normal distribution function
+      // interpolated, single precision accuracy
       // http://stackoverflow.com/questions/5259421/cumulative-distribution-function-in-javascript
-      function CNDF (z) {
-        var b1, b2, b3, b4, b5, p, c2, a, t, b, n;
-
-        b1 =  0.31938153;
-        b2 = -0.356563782;
-        b3 =  1.781477937;
-        b4 = -1.821255978;
-        b5 =  1.330274429;
-        p  =  0.2316419;
-        c2 =  0.3989423;
+      function _CNDFs (x) {
+        var k1, k2,
+            a1 =  0.31938153,
+            a2 = -0.356563782,
+            a3 =  1.781477937,
+            a4 = -1.821255978,
+            a5 =  1.330274429;
         
-        a = Math.abs(z);
+        if (x < 0) return (1 - _CNDFs(-x));
+        else if (x > 6) return 1.0;
+        else {
+          k1 = 1.0 / (1.0 + 0.2316419 * x);
+          k2 = ((((a5 * k1 + a4) * k1 + a3) * k1 + a2) * k1 + a1) * k1;
+          return 1.0 - _NDF(x) * k2;
+        }
+      }
 
-        if (a > 6.0) return 1.0;
+      // cumulative normal distribution function
+      // interpolated, double precision accuracy
+      // http://stackoverflow.com/questions/2328258/cumulative-normal-distribution-function-in-c-c
+      function _CNDFd (x) {
+        var RT2PI = Math.sqrt(2 * Math.PI),
+            SPLIT = 7.07106781186547,
+            
+            N0 = 220.206867912376,
+            N1 = 221.213596169931,
+            N2 = 112.079291497871,
+            N3 = 33.912866078383,
+            N4 = 6.37396220353165,
+            N5 = 0.700383064443688,
+            N6 = 0.0352624965998911,
 
-        t = 1.0 / (1.0 + a * p);
-        b = c2 * Math.exp(- (z * z) / 2.0);
-        n = ((((b5 * t + b4) * t + b3) * t + b2) * t + b1) * t;
-        n = 1.0 - b * n;
-        if (z < 0.0) n = 1.0 - n;
+            M0 = 440.413735824752,
+            M1 = 793.826512519948,
+            M2 = 637.333633378831,
+            M3 = 296.564248779674,
+            M4 = 86.7807322029461,
+            M5 = 16.064177579207,
+            M6 = 1.75566716318264,
+            M7 = 0.0883883476483184,
 
-        return n;
-      }  
+            z = Math.abs(x),
+            answer = 0.0,
+            k1, k2, k3;
 
-      // given a decimal number z, returns a string with whole number + fractional string
-      // i.e. z = 4.375, returns "4 3/8"
-      function fraction (z) {
-        var whole = Math.floor(z),
-            fract = z - whole,
-            thirtytwos = Math.round(fract * 32),
-            tmp;
+        if (z <= 37) {
+          k1 = Math.exp(- z * z / 2);
+          
+          if (z < SPLIT) {
+            k2 = (((((N6 * z + N5) * z + N4) * z + N3) * z + N2) * z + N1) * z + N0;
+            k3 = ((((((M7 * z + M6) * z + M5) * z + M4) * z + M3) * z + M2) * z + M1) * z + M0;
+            answer = k1 * k2 / k3;
+          }
 
-        // if fraction is < 1/64
-        if (thirtytwos === 0) return whole + ' ';
-        
-        // if fraction is > 63/64
-        if (thirtytwos === 32) return whole + 1;
-       
+          else {
+            k3 = z + 1.0 / (z + 2.0 / (z + 3.0 / (z + 4.0 / (z + 13.0 / 20.0))));
+            answer = k1 / (RT2PI * k3);
+          }
+        }
 
-        // -- 32's non-trivial denominators: 2,4,8,16 -----
-
-        if (thirtytwos / 16 === 1) return whole + ' 1/2';
-       
-        if (thirtytwos / 8 === 1) return whole + ' 1/4';
-        if (thirtytwos / 8 === 3) return whole + ' 3/4';
-       
-        tmp = thirtytwos / 4;
-        if (tmp === Math.floor(tmp)) return whole + ' ' + tmp + '/8';
-       
-        tmp = thirtytwos / 2;
-        if (tmp === Math.floor(tmp)) return whole + ' ' + tmp + '/16';
-        
-
-        //
-        return whole + ' ' + thirtytwos + '/32';
+        return (x <= 0) ? answer : 1 - answer;
       }
 
       // returns probability of occuring below and above target price
@@ -128,31 +135,36 @@
         X -- strike price
         rate -- risk free interest rate (in percent, e.g. 5.25% -> rate=5.25)
         days -- left to expiration
-        HV -- historical volatility
+        HV -- historical volatility (in percent)
       */
-      function option (type, S, X, rate, days, HV) {
+      function getPriceBySigma (type, S, X, rate, days, HV) {
         var r = rate / 100,
             t = days / 365,
-            sqrt_t   = Math.sqrt(t),
-            exp_rt   = Math.exp(-r * t),
-            NDF_d1   = NDF(d1),
-            CNDF_d2  = type ? CNDF(d2) : -CNDF(-d2),
-            delta    = type ? CNDF(d1) : -CNDF(-d1),
+            sigma = HV / 100,
 
-            d1 = (Math.log(S / X) + r * t) / (HV * sqrt_t) + 0.5 * (HV * sqrt_t),
-            d2 = d1 - (HV * sqrt_t);              
+            sqrt_t = Math.sqrt(t),
+            exp_rt = Math.exp(-r * t),
+
+            d1 = (Math.log(S / X) + r * t) / (sigma * sqrt_t) + 0.5 * (sigma * sqrt_t),
+            d2 = d1 - sigma * sqrt_t,
+
+            CNDF_d1 = type ? CNDF(d1) : -CNDF(-d1),
+            CNDF_d2 = type ? CNDF(d2) : -CNDF(-d2),
+            NDF_d1 = NDF(d1);
 
         return {
-          price: S * delta - X * exp_rt * CNDF_d2,
-          delta: delta,
-          gamma: NDF_d1 / (S * HV * sqrt_t),
+          price: S * CNDF_d1 - X * exp_rt * CNDF_d2,
+          delta: CNDF_d1,
+          gamma: NDF_d1 / (S * sigma * sqrt_t),
           vega:  S * sqrt_t * NDF_d1,
-          theta: -(S * HV * NDF_d1) / (2 * sqrt_t) - r * X * exp_rt * CNDF_d2,
+          theta: ( -(S * sigma * NDF_d1) / (2 * sqrt_t) - r * X * exp_rt * CNDF_d2 ) / 365,
           rho:   X * t * exp_rt * CNDF_d2
         };
       }
 
       // returns option implied volatility by given price
+      // Newton-Raphson algorithm
+      // http://quant.stackexchange.com/questions/7761/how-to-compute-implied-volatility-calculation
       /*
         INPUTS:
         type -- option type: call -> true, put -> false
@@ -162,37 +174,62 @@
         days -- left to expiration
         price -- option price
       */
-      function iv (type, S, X, rate, days, price) {
+      function getSigmaByPriceNR (type, S, X, rate, days, price) {
         var ITERATIONS = 100,
-            ACCURACY = 0.0001,
+            ACCURACY = 0.01,
+            iv, i, bs, dprice;
 
-            r = rate / 100,
-            t = days / 365,
-            sqrt_t = Math.sqrt(t),
+        // initial guess
+        iv = Math.sqrt(2 * Math.PI / (days / 365)) * price / S;
 
-            sigma = (price / S) / (0.398 * sqrt_t),
-            i, diff, d1, vega;
-
+        // iterate
         for (i = 0; i < ITERATIONS; i++) {
-          diff = price - option(type, S, X, r, sigma, t).price;
-          if (Math.abs(diff) < ACCURACY) return sigma;
-          else {
-            d1 = (Math.log(S / X) + r * t) / (sigma * sqrt_t) + 0.5 * sigma * sqrt_t;
-            vega = S * sqrt_t * NDF(d1);
-            sigma = sigma + diff / vega;
-          }
+          bs = getPriceBySigma(type, S, X, rate, days, iv * 100);
+          dprice = bs.price - price;
+          if (Math.abs(dprice) < ACCURACY) return iv;
+          else iv -= dprice / bs.vega;
         }
 
-        // failed to converge
+        // failed
         return -1;
       }
 
-      // factory return
+      // returns option implied volatility by given price
+      // Bisection algorithm
+      // http://sfb649.wiwi.hu-berlin.de/fedc_homepage/xplore/tutorials/xlghtmlnode65.html
+      /*
+        INPUTS:
+        type -- option type: call -> true, put -> false
+        S -- stock price
+        X -- strike price
+        rate -- risk free interest rate (in percent, e.g. 5.25% -> rate=5.25)
+        days -- left to expiration
+        price -- option price
+      */
+      function getSigmaByPriceB (type, S, X, rate, days, price) {
+        var ACCURACY = 0.01,
+            ITERATIONS = 20,
+            i, bs, dprice,
+            iv, ivLeft = 0, ivRight = 100;
+
+        for (i = 0; i < ITERATIONS; i++) {
+          iv = (ivLeft + ivRight) / 2;
+          bs = getPriceBySigma(type, S, X, rate, days, iv);
+          dprice = bs.price - price;
+
+          if (Math.abs(dprice) < ACCURACY) return iv;
+          else if (dprice > 0) ivRight = iv;
+          else ivLeft = iv;
+        }
+
+        return -1;
+      }
+
+      var NDF = _NDF, CNDF = _CNDFs;
       return {
-        fraction: fraction,
-        probability: probability,
-        option: option,
-        iv: iv
+        p: probability,
+        bs: getPriceBySigma,
+        iv: getSigmaByPriceB
       };
     }]);
 
