@@ -175,7 +175,7 @@
         price -- option price
       */
       function getSigmaByPriceNR (type, S, X, rate, days, price) {
-        var ITERATIONS = 100,
+        var ITERATIONS = 10,
             ACCURACY = 0.01,
             iv, i, bs, dprice;
 
@@ -191,7 +191,7 @@
         }
 
         // failed
-        return -1;
+        return 0;
       }
 
       // returns option implied volatility by given price
@@ -208,7 +208,7 @@
       */
       function getSigmaByPriceB (type, S, X, rate, days, price) {
         var ACCURACY = 0.01,
-            ITERATIONS = 20,
+            ITERATIONS = 10,
             i, bs, dprice,
             iv, ivLeft = 0, ivRight = 100;
 
@@ -222,7 +222,7 @@
           else ivLeft = iv;
         }
 
-        return -1;
+        return 0;
       }
 
       var NDF = _NDF, CNDF = _CNDFs;
