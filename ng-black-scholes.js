@@ -137,7 +137,7 @@
         days -- left to expiration
         HV -- historical volatility (in percent)
       */
-      function getPriceBySigma (type, S, X, rate, days, HV) {
+      function getOptionBySigma (type, S, X, rate, days, HV) {
         var r = rate / 100,
             t = days / 365,
             sigma = HV / 100,
@@ -184,7 +184,7 @@
 
         // iterate
         for (i = 0; i < ITERATIONS; i++) {
-          bs = getPriceBySigma(type, S, X, rate, days, iv * 100);
+          bs = getOptionBySigma(type, S, X, rate, days, iv * 100);
           dprice = bs.price - price;
           if (Math.abs(dprice) < ACCURACY) return iv;
           else iv -= dprice / bs.vega;
@@ -208,13 +208,13 @@
       */
       function getSigmaByPriceB (type, S, X, rate, days, price) {
         var ACCURACY = 0.01,
-            ITERATIONS = 10,
-            i, bs, dprice,
-            iv, ivLeft = 0, ivRight = 100;
+            iv, ivLeft = 0, ivRight = 500,
+            ITERATIONS = Math.round( Math.log( (ivRight - ivLeft) / ACCURACY ) / Math.LN2 + 1 ),
+            i, bs, dprice;
 
         for (i = 0; i < ITERATIONS; i++) {
           iv = (ivLeft + ivRight) / 2;
-          bs = getPriceBySigma(type, S, X, rate, days, iv);
+          bs = getOptionBySigma(type, S, X, rate, days, iv);
           dprice = bs.price - price;
 
           if (Math.abs(dprice) < ACCURACY) return iv;
@@ -225,11 +225,35 @@
         return 0;
       }
 
+      // returns option implied volatility
+      // my own method (including "negative" values)
+      /*
+        INPUTS:
+        type -- option type: call -> true, put -> false
+        S -- stock price
+        X -- strike price
+        rate -- risk free interest rate (in percent, e.g. 5.25% -> rate=5.25)
+        days -- left to expiration
+        price -- option price
+      */
+      function getSigmaByPrice (type, S, X, rate, days, price) {
+        var sigma = getSigmaByPriceB(type, S, X, rate, days, price),
+            priceIntrinsic, priceSurrogate;
+
+        if (sigma !== 0) return sigma;
+        else {
+          priceIntrinsic = getOptionBySigma(type, S, X, rate, days, 0).price;
+          priceSurrogate = priceIntrinsic + (priceIntrinsic - price);
+          sigma = -getSigmaByPriceB(type, S, X, rate, days, priceSurrogate);
+          return sigma;
+        }
+      }
+
       var NDF = _NDF, CNDF = _CNDFs;
       return {
         p: probability,
-        bs: getPriceBySigma,
-        iv: getSigmaByPriceB
+        bs: getOptionBySigma,
+        iv: getSigmaByPrice
       };
     }]);
 
