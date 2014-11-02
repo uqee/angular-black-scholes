@@ -207,8 +207,8 @@
         price -- option price
       */
       function getSigmaByPriceB (type, S, X, rate, days, price) {
-        var ACCURACY = 0.01,
-            iv, ivLeft = 0, ivRight = 500,
+        var ACCURACY = 0.001,
+            iv, ivLeft = 0, ivRight = 200,
             ITERATIONS = Math.round( Math.log( (ivRight - ivLeft) / ACCURACY ) / Math.LN2 + 1 ),
             i, bs, dprice;
 
@@ -237,16 +237,22 @@
         price -- option price
       */
       function getSigmaByPrice (type, S, X, rate, days, price) {
-        var sigma = getSigmaByPriceB(type, S, X, rate, days, price),
-            priceIntrinsic, priceSurrogate;
+        var sigma,
+            priceIntrinsic = getOptionBySigma(type, S, X, rate, days, 0).price,
+            priceSurrogate;
 
-        if (sigma !== 0) return sigma;
+        if (price === priceIntrinsic)
+          sigma = 0;
+        
+        else if (price > priceIntrinsic)
+          sigma = getSigmaByPriceB(type, S, X, rate, days, price);
+        
         else {
-          priceIntrinsic = getOptionBySigma(type, S, X, rate, days, 0).price;
           priceSurrogate = priceIntrinsic + (priceIntrinsic - price);
           sigma = -getSigmaByPriceB(type, S, X, rate, days, priceSurrogate);
-          return sigma;
         }
+
+        return sigma;
       }
 
       var NDF = _NDF, CNDF = _CNDFs;
