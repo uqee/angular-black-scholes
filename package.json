@@ -1,0 +1,32 @@
+{
+  "version": "0.1.0",
+  "name": "angular-black-scholes",
+  "description": "Simple Black–Scholes calculator without any dependencies",
+  "homepage": "http://github.com/uqee/angular-black-scholes",
+  "keywords": [
+    "market",
+    "options",
+    "portfolio",
+    "risk"
+  ],
+  "license": "MIT",
+  "main": "lib/angular-black-scholes.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/uqee/angular-black-scholes.git"
+  },
+  "engines": {
+    "node": "4.x"
+  },
+  "dependencies": {
+    "angular": "^1.5.8"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "uglify": "cd lib && uglifyjs --compress --mangle --screw-ie8 -o angular-black-scholes.min.js --source-map angular-black-scholes.min.js.map -- angular-black-scholes.js"
+  },
+  "author": {
+    "name": "Denis Zhbankov",
+    "url": "https://github.com/uqee"
+  }
+}
