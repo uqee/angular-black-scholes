@@ -1,0 +1,24 @@
+{
+  // http://www.jshint.com/docs/options/
+
+  // enforcing
+  "bitwise": true,
+  "eqeqeq": true,
+  //"esversion": 5,
+  "forin": true,
+  "freeze": true,
+  "futurehostile": true,
+  "latedef": true,
+  "noarg": true,
+  "nocomma": true,
+  "nonbsp": true,
+  "nonew": true,
+  "strict": true,
+  "undef": true,
+  "unused": "vars",
+
+  // relaxing
+  "globals": {
+    "angular": false
+  }
+}
