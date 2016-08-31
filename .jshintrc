@@ -17,8 +17,11 @@
   "undef": true,
   "unused": "vars",
 
+  // environment
+  "browserify": true,
+
   // relaxing
   "globals": {
-    "angular": false
+    "angular": true
   }
 }
