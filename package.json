@@ -15,17 +15,14 @@
     "type": "git",
     "url": "https://github.com/uqee/angular-black-scholes.git"
   },
-  "engines": {
-    "node": "^6.9.1"
-  },
   "dependencies": {
-    "angular": "^1.6.0"
+    "angular": "^1.6.9"
   },
   "devDependencies": {
-    "uglifyjs": "^2.7.5"
+    "uglify-js": "^3.3.17"
   },
   "scripts": {
-    "uglify": "cd lib && uglifyjs --compress --mangle --screw-ie8 -o angular-black-scholes.min.js --source-map angular-black-scholes.min.js.map -- angular-black-scholes.js"
+    "start": "cd lib && uglifyjs --compress --mangle -o angular-black-scholes.min.js --source-map \"filename='angular-black-scholes.min.js.map'\" -- angular-black-scholes.js"
   },
   "author": {
     "name": "Denis Zhbankov",
