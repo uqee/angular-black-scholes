@@ -1,5 +1,5 @@
 {
-  "version": "0.2.1",
+  "version": "0.2.2",
   "name": "angular-black-scholes",
   "description": "Simple Black–Scholes calculator with browserify support",
   "homepage": "http://github.com/uqee/angular-black-scholes",
@@ -15,17 +15,14 @@
     "type": "git",
     "url": "https://github.com/uqee/angular-black-scholes.git"
   },
-  "engines": {
-    "node": "4.x"
-  },
   "dependencies": {
-    "angular": "^1.5.8"
+    "angular": "^1.6.9"
   },
   "devDependencies": {
-    "uglifyjs": "^2.4.10"
+    "uglify-js": "^3.3.17"
   },
   "scripts": {
-    "uglify": "cd lib && uglifyjs --compress --mangle --screw-ie8 -o angular-black-scholes.min.js --source-map angular-black-scholes.min.js.map -- angular-black-scholes.js"
+    "start": "cd lib && uglifyjs --compress --mangle -o angular-black-scholes.min.js --source-map \"filename='angular-black-scholes.min.js.map'\" -- angular-black-scholes.js"
   },
   "author": {
     "name": "Denis Zhbankov",
